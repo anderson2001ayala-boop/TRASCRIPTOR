@@ -3,6 +3,7 @@ import whisper
 import os
 import tempfile
 from datetime import timedelta
+from deep_translator import GoogleTranslator
 
 st.set_page_config(page_title="Transcriptor IA - Anderson", page_icon="🎙️", layout="wide")
 
@@ -55,24 +56,30 @@ if audio:
             opciones = {}
             if idiomas[idioma]:
                 opciones["language"] = idiomas[idioma]
-            if traducciones[traduccion]:
-                opciones["task"] = "translate"
 
             result = model.transcribe(tmp_path, **opciones)
             os.unlink(tmp_path)
+
+            texto_final = result["text"]
+
+            if traducciones[traduccion]:
+                texto_final = GoogleTranslator(
+                    source="auto",
+                    target=traducciones[traduccion]
+                ).translate(texto_final)
 
         st.success("✅ Transcripción completada")
         st.markdown("---")
 
         col3, col4, col5 = st.columns(3)
-        palabras = len(result["text"].split())
+        palabras = len(texto_final.split())
         tiempo_lectura = round(palabras / 200)
         col3.metric("📝 Palabras", palabras)
         col4.metric("📖 Tiempo de lectura", f"{tiempo_lectura} min")
         col5.metric("🌎 Idioma detectado", result.get("language", "desconocido").upper())
 
         st.subheader("📝 Texto transcrito:")
-        st.text_area("Resultado", result["text"], height=300)
+        st.text_area("Resultado", texto_final, height=300)
 
         if timestamps and "segments" in result:
             st.subheader("⏱️ Transcripción por segmentos:")
@@ -87,12 +94,12 @@ if audio:
         with col6:
             st.download_button(
                 label="📄 Descargar como TXT",
-                data=result["text"],
+                data=texto_final,
                 file_name="transcripcion.txt",
                 mime="text/plain"
             )
         with col7:
-            contenido_word = f"TRANSCRIPCIÓN DE AUDIO\n{'='*40}\n\n{result['text']}\n\n{'='*40}\nDesarrollado por Anderson Ayala | 2026"
+            contenido_word = f"TRANSCRIPCIÓN DE AUDIO\n{'='*40}\n\n{texto_final}\n\n{'='*40}\nDesarrollado por Anderson Ayala | 2026"
             st.download_button(
                 label="📝 Descargar como Word",
                 data=contenido_word,
